@@ -97,4 +97,20 @@ struct LivePreviewStylerTests {
         #expect(r.contains { $0 == (.heading(level: 1), "Title") })
         #expect(r.contains { $0 == (.conceal, "# ") })
     }
+
+    @Test("List and quote lines have block runs as well as marker runs")
+    func listAndQuoteBlocks() {
+        let list = runs("- item", selection: Selection(caret: 3))
+        #expect(list.contains { $0 == (.listBlock, "- item") })
+        #expect(list.contains { $0 == (.listMarker, "-") })
+
+        let quote = runs("> thought", selection: Selection(caret: 4))
+        #expect(quote.contains { $0 == (.quoteBlock, "> thought") })
+        #expect(quote.contains { $0 == (.quoteMarker, "> ") })
+
+        let inactiveList = runs("- item", selection: nil, focused: false)
+        #expect(inactiveList.contains { $0 == (.conceal, "- ") })
+        let inactiveQuote = runs("> thought", selection: nil, focused: false)
+        #expect(inactiveQuote.contains { $0 == (.conceal, "> ") })
+    }
 }

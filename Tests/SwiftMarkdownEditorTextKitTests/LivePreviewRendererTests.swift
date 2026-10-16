@@ -101,6 +101,32 @@ struct LivePreviewRendererTests {
         let s = render("a `c` b", selection: nil, focused: false)
         #expect(isConcealed(s, 2))         // backtick
         #expect(isMono(font(s, 3)))
+        #expect(s.attribute(.backgroundColor, at: 3, effectiveRange: nil) as? PlatformColor != nil)
+    }
+
+    @Test("Chinese emphasis has a visible synthetic slant")
+    func cjkEmphasis() {
+        let s = render("*你好*", selection: Selection(caret: 2), focused: true)
+        #expect((s.attribute(.obliqueness, at: 1, effectiveRange: nil) as? Double) == 0.12)
+    }
+
+    @Test("List marker is accented and continuation lines are indented")
+    func listBlock() {
+        let s = render("- item", selection: Selection(caret: 3), focused: true)
+        let style = s.attribute(.paragraphStyle, at: 2, effectiveRange: nil) as? NSParagraphStyle
+        #expect((style?.headIndent ?? 0) > 0)
+        #expect((style?.firstLineHeadIndent ?? 0) > 0)
+        #expect(s.attribute(MarkdownEditorBlockAttribute.list, at: 2, effectiveRange: nil) != nil)
+        #expect(color(s, 0) != color(s, 2))
+    }
+
+    @Test("Quote body is indented and its marker is accented")
+    func quoteBlock() {
+        let s = render("> thought", selection: Selection(caret: 4), focused: true)
+        let style = s.attribute(.paragraphStyle, at: 2, effectiveRange: nil) as? NSParagraphStyle
+        #expect((style?.firstLineHeadIndent ?? 0) > 0)
+        #expect(s.attribute(MarkdownEditorBlockAttribute.quote, at: 2, effectiveRange: nil) != nil)
+        #expect(color(s, 0) != color(s, 2))
     }
 
     @Test("Strikethrough content has the strikethrough attribute")

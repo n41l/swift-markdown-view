@@ -100,6 +100,13 @@ struct MarkdownAttributedBuilderTests {
         #expect(isItalic(result.font(at: i)))
     }
 
+    @Test("Chinese emphasis has a visible slant in rendered cards")
+    func chineseEmphasisSlant() throws {
+        let result = build("*你好*")
+        let i = try #require(result.index(of: "你"))
+        #expect((result.attribute(.obliqueness, at: i, effectiveRange: nil) as? Double) == 0.12)
+    }
+
     @Test("Inline code uses a monospaced font with a background")
     func inlineCode() throws {
         let result = build("call `print()` now")

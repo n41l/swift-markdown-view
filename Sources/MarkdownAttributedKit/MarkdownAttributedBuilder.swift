@@ -429,7 +429,15 @@ package struct MarkdownAttributedBuilder {
         for inline in inlines {
             switch inline {
             case .text(let string):
-                out.append(NSAttributedString(string: string, attributes: context.attributes))
+                var attributes = context.attributes
+                if context.italic && string.unicodeScalars.contains(where: {
+                    (0x3400...0x4DBF).contains($0.value) || (0x4E00...0x9FFF).contains($0.value)
+                }) {
+                    // CJK fallback fonts often have no italic face. Match the
+                    // source editor's visible slant without changing the text.
+                    attributes[.obliqueness] = 0.12
+                }
+                out.append(NSAttributedString(string: string, attributes: attributes))
 
             case .emphasis(let children):
                 out.append(inlineText(children, context: context.with(italic: true)))

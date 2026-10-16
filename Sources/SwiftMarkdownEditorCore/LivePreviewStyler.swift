@@ -13,6 +13,12 @@ package struct StyleRun: Equatable, Sendable {
         case strikethrough
         /// The content of an ATX heading, rendered large and bold according to its level (1–6).
         case heading(level: Int)
+        /// A list line keeps its source marker, with an indented continuation.
+        case listBlock
+        case listMarker
+        /// A quote line has indented, subdued body text and an accented marker.
+        case quoteBlock
+        case quoteMarker
         /// Hides the range visually while keeping its text, used for delimiter markers.
         case conceal
     }
@@ -56,6 +62,7 @@ package enum LivePreviewStyler {
         // fenced ranges are handed over here and excluded. Without that, the `**` inside
         // ```` ```let a = **b** ``` ```` gets concealed and the symbols vanish from the user's code.
         let tokens = MarkdownTokenizer.tokenize(text)
+        appendBlockRuns(text: text, lines: lines, tokens: tokens, activeLine: activeLine, into: &runs)
         appendHeadingRuns(lines: lines, tokens: tokens, activeLine: activeLine, into: &runs)
 
         let verbatim = MarkdownTokenizer.fencedCodeRanges(tokens)
@@ -99,6 +106,40 @@ package enum LivePreviewStyler {
             }
         }
         return false
+    }
+
+    // MARK: - List and quote blocks
+
+    private static func appendBlockRuns(
+        text: String,
+        lines: LineIndex,
+        tokens: [MarkdownToken],
+        activeLine: TextSpan?,
+        into runs: inout [StyleRun]
+    ) {
+        let source = text as NSString
+        for token in tokens {
+            let line = lines.lineRange(containing: token.range.lowerBound)
+            let revealed = activeLine.map { $0.overlaps(line) } ?? false
+            switch token.kind {
+            case .listMarker:
+                runs.append(StyleRun(range: line, trait: .listBlock))
+                runs.append(StyleRun(range: token.range, trait: .listMarker))
+                if !revealed {
+                    let end = token.range.upperBound < line.upperBound && source.character(at: token.range.upperBound) == 0x20
+                        ? token.range.upperBound + 1 : token.range.upperBound
+                    runs.append(StyleRun(range: TextSpan(lowerBound: token.range.lowerBound, upperBound: end), trait: .conceal))
+                }
+            case .blockquote:
+                runs.append(StyleRun(range: line, trait: .quoteBlock))
+                runs.append(StyleRun(range: token.range, trait: .quoteMarker))
+                if !revealed {
+                    runs.append(StyleRun(range: token.range, trait: .conceal))
+                }
+            default:
+                break
+            }
+        }
     }
 
     // MARK: - Block headings

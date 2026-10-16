@@ -159,6 +159,7 @@ public extension MarkdownSourceTextView {
 #if canImport(UIKit)
 private final class MarkdownEditorUITextView: UITextView {
     var caretFontLineHeight: CGFloat = 0
+    var blockFragmentProvider: MarkdownEditorBlockFragmentProvider?
 
     override func caretRect(for position: UITextPosition) -> CGRect {
         var rect = super.caretRect(for: position)
@@ -177,6 +178,9 @@ extension MarkdownSourceTextView: UIViewRepresentable {
     public func makeUIView(context: Context) -> UITextView {
         let textView = MarkdownEditorUITextView(usingTextLayoutManager: true)
         assert(textView.textLayoutManager != nil, "Expected TextKit 2 to be active")
+        let blockProvider = MarkdownEditorBlockFragmentProvider(accent: theme.tintColor)
+        textView.blockFragmentProvider = blockProvider
+        textView.textLayoutManager?.delegate = blockProvider
 
         textView.delegate = context.coordinator
         textView.isEditable = isEditable
@@ -218,6 +222,7 @@ extension MarkdownSourceTextView: UIViewRepresentable {
         textView.textContainer.lineFragmentPadding = 0
         if let textView = textView as? MarkdownEditorUITextView {
             textView.caretFontLineHeight = MarkdownSyntaxHighlighter.font(size: theme.baseFontSize).lineHeight
+            textView.blockFragmentProvider?.accent = theme.tintColor
         }
 
         let signature = styleSignature()

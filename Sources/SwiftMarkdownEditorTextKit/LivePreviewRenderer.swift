@@ -50,9 +50,15 @@ enum LivePreviewRenderer {
                 mergeTrait(.bold, in: r, storage: storage, baseSize: theme.baseFontSize)
             case .italic:
                 mergeTrait(.italic, in: r, storage: storage, baseSize: theme.baseFontSize)
+                // System CJK fallback fonts often have no visible italic face.
+                // Give those glyphs a modest synthetic slant as well.
+                if containsCJK(ns.substring(with: r)) {
+                    storage.addAttribute(.obliqueness, value: 0.12, range: r)
+                }
             case .monospace:
                 storage.addAttribute(.font, value: MarkdownSyntaxHighlighter.font(size: theme.baseFontSize, monospace: true), range: r)
                 storage.addAttribute(.foregroundColor, value: codeColor, range: r)
+                storage.addAttribute(.backgroundColor, value: theme.tintColor.withAlphaComponent(0.10), range: r)
             case .strikethrough:
                 storage.addAttribute(.strikethroughStyle, value: NSUnderlineStyle.single.rawValue, range: r)
             case .heading(let level):
@@ -61,6 +67,25 @@ enum LivePreviewRenderer {
                 if let color = theme.style(for: .heading).color {
                     storage.addAttribute(.foregroundColor, value: color, range: r)
                 }
+            case .listBlock:
+                let paragraph = paragraphStyle(theme: theme)
+                paragraph.firstLineHeadIndent = theme.baseFontSize * 1.3
+                paragraph.headIndent = theme.baseFontSize * 1.3
+                storage.addAttribute(.paragraphStyle, value: paragraph, range: r)
+                storage.addAttribute(MarkdownEditorBlockAttribute.list, value: true, range: r)
+            case .listMarker:
+                storage.addAttribute(.foregroundColor, value: theme.style(for: .listMarker).color ?? theme.tintColor, range: r)
+                mergeTrait(.bold, in: r, storage: storage, baseSize: theme.baseFontSize)
+            case .quoteBlock:
+                let paragraph = paragraphStyle(theme: theme)
+                paragraph.firstLineHeadIndent = theme.baseFontSize * 0.75
+                paragraph.headIndent = theme.baseFontSize * 0.75
+                storage.addAttribute(.paragraphStyle, value: paragraph, range: r)
+                storage.addAttribute(.foregroundColor, value: theme.style(for: .blockquote).color ?? theme.textColor, range: r)
+                storage.addAttribute(MarkdownEditorBlockAttribute.quote, value: true, range: r)
+            case .quoteMarker:
+                storage.addAttribute(.foregroundColor, value: theme.tintColor, range: r)
+                mergeTrait(.bold, in: r, storage: storage, baseSize: theme.baseFontSize)
             case .conceal:
                 let markerText = ns.substring(with: r) as NSString
                 let width = markerText.size(withAttributes: [.font: concealFont]).width
@@ -70,6 +95,17 @@ enum LivePreviewRenderer {
                     .kern: -width,
                 ], range: r)
             }
+        }
+    }
+
+    private static func paragraphStyle(theme: MarkdownEditorTheme) -> NSMutableParagraphStyle {
+        let base = MarkdownSyntaxHighlighter.baseAttributes(theme: theme)[.paragraphStyle] as? NSParagraphStyle
+        return (base?.mutableCopy() as? NSMutableParagraphStyle) ?? NSMutableParagraphStyle()
+    }
+
+    private static func containsCJK(_ text: String) -> Bool {
+        text.unicodeScalars.contains {
+            (0x3400...0x4DBF).contains($0.value) || (0x4E00...0x9FFF).contains($0.value)
         }
     }
 

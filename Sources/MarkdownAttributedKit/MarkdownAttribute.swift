@@ -65,6 +65,8 @@ public final class MarkdownAttachment: NSObject {
 package final class MarkdownBlockDecoration: NSObject {
 
     public enum Kind: Equatable, Sendable {
+        /// A heading badge is drawn at the right edge without entering copied text.
+        case heading(level: Int)
         /// A fenced or indented code block.
         ///
         /// The fragment fills a rounded background behind it.
@@ -93,6 +95,7 @@ package final class MarkdownBlockDecoration: NSObject {
 
     public override var hash: Int {
         switch kind {
+        case .heading(let level): return 0x487000 ^ level
         case .codeBlock(let language): return language.hashValue
         case .blockQuote(let level): return level.hashValue
         case .thematicBreak: return 0x7B12EAC

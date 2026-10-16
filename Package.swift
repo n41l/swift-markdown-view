@@ -186,6 +186,11 @@ let package = Package(
             ]
         ),
 
+        .testTarget(
+            name: "TaggiiMarkdownRenderingTests",
+            dependencies: ["MarkdownAttributedKit", "MarkdownModel"]
+        ),
+
         // Markdown autoformatting (input rules). Pure logic, layered on the editor core.
         .target(
             name: "SwiftMarkdownEditorRules",

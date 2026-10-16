@@ -82,6 +82,7 @@ final class MarkdownLayoutFragment: NSTextLayoutFragment {
         drawThematicBreaks(at: point, in: context)
         drawBlockquoteBars(at: point, in: context)
         drawTableRowSeparators(at: point, in: context)
+        drawHeadingBadges(at: point, in: context)
     }
 
     // MARK: Storage access
@@ -106,12 +107,41 @@ final class MarkdownLayoutFragment: NSTextLayoutFragment {
     private var hasFullWidthDecoration: Bool {
         guard let range = fragmentRange else { return false }
         switch decoration(at: range.location)?.kind {
-        case .codeBlock, .thematicBreak, .blockQuote: return true
+        case .codeBlock, .thematicBreak, .blockQuote, .heading: return true
         case .table, .none: return false
         }
     }
 
     // MARK: Code-block background
+
+    private func drawHeadingBadges(at point: CGPoint, in context: CGContext) {
+        guard let palette, let range = fragmentRange,
+              case .heading(let level) = decoration(at: range.location)?.kind,
+              let containerWidth = textLayoutManager?.textContainer?.size.width,
+              let firstLine = textLineFragments.first,
+              firstLine.characterRange.location == 0 else { return }
+
+        let left = point.x - layoutFragmentFrame.origin.x
+        let bounds = firstLine.typographicBounds
+        let rect = CGRect(x: left + containerWidth - 29,
+                          y: point.y + bounds.origin.y + max(0, (bounds.height - 17) / 2),
+                          width: 25, height: 17)
+        context.saveGState()
+        context.setFillColor(palette.codeBackground.cgColor)
+        context.addPath(CGPath(roundedRect: rect, cornerWidth: 5, cornerHeight: 5, transform: nil))
+        context.fillPath()
+        context.restoreGState()
+
+        #if canImport(UIKit)
+        let font = UIFont.monospacedSystemFont(ofSize: 9, weight: .semibold)
+        #else
+        let font = NSFont.monospacedSystemFont(ofSize: 9, weight: .semibold)
+        #endif
+        ("H\(level)" as NSString).draw(
+            in: rect.insetBy(dx: 3, dy: 2),
+            withAttributes: [.font: font, .foregroundColor: palette.quoteBar]
+        )
+    }
 
     private func drawCodeBackground(at point: CGPoint, in context: CGContext) {
         guard let palette, let range = fragmentRange,

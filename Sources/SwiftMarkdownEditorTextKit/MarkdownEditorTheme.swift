@@ -38,6 +38,7 @@ public struct MarkdownEditorTheme {
     /// set, whether the theme drives ``MarkdownSourceTextView`` directly or arrives at
     /// `MarkdownEditor` through the environment.
     public var baseFontSize: CGFloat
+    public var lineHeightMultiple: CGFloat = 1.2
 
     /// The foreground color of the whole document, showing through wherever a token style defines no
     /// color of its own.
@@ -91,6 +92,7 @@ public extension MarkdownEditorTheme {
     ///   - code: The color of inline code and of the contents of fenced code blocks.
     static func make(
         baseFontSize: CGFloat,
+        lineHeightMultiple: CGFloat = 1.2,
         textColor: PlatformColor,
         backgroundColor: PlatformColor,
         muted: PlatformColor,
@@ -113,13 +115,15 @@ public extension MarkdownEditorTheme {
             .linkText: TokenStyle(color: accent),
             .linkURL: TokenStyle(color: muted)
         ]
-        return MarkdownEditorTheme(
+        var theme = MarkdownEditorTheme(
             baseFontSize: baseFontSize,
             textColor: textColor,
             backgroundColor: backgroundColor,
             tintColor: accent,
             styles: styles
         )
+        theme.lineHeightMultiple = lineHeightMultiple
+        return theme
     }
 
     /// The default light preset, built from the system's semantic colors.

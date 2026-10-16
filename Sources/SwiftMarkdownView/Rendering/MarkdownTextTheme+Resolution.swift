@@ -38,6 +38,7 @@ extension MarkdownTextTheme {
             quoteBarColor: color(palette.rule),
             ruleColor: color(palette.rule),
             paragraphSpacing: metrics.paragraphSpacing,
+            lineHeightMultiple: metrics.lineHeightMultiple,
             indentStep: metrics.indentStep,
             headingSizes: typeScale.headingSizes,
             headingWeight: .semibold

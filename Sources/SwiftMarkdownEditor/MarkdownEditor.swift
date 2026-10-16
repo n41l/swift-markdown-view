@@ -1,4 +1,7 @@
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
 import SwiftMarkdownView
 import SwiftMarkdownEditorCore
 import SwiftMarkdownEditorRules
@@ -35,6 +38,13 @@ public struct MarkdownEditor: View {
     private let inputRules: InputRuleProcessor
     private let livePreview: Bool
     private let toolbarItems: [MarkdownEditorToolbarItem]
+    private let showsHeader: Bool
+    private let blockStyleMenu: Bool
+    private let contentInset: CGFloat
+
+    @State private var blockPressHandler = MarkdownBlockLongPressHandler()
+    @State private var pressedBlockOffset: Int?
+    @State private var showsBlockStyleMenu = false
 
     /// The controller used when the caller does not supply one.
     @StateObject private var ownedController = MarkdownEditorController()
@@ -73,7 +83,10 @@ public struct MarkdownEditor: View {
         livePreview: Bool = false,
         inputRules: InputRuleProcessor = .standard,
         toolbar: [MarkdownEditorToolbarItem] = .standard,
-        controller: MarkdownEditorController? = nil
+        controller: MarkdownEditorController? = nil,
+        showsHeader: Bool = true,
+        blockStyleMenu: Bool = false,
+        contentInset: CGFloat = 12
     ) {
         self._text = text
         self._ownedMode = State(initialValue: initialMode)
@@ -82,6 +95,9 @@ public struct MarkdownEditor: View {
         self.inputRules = inputRules
         self.toolbarItems = toolbar
         self.injectedController = controller
+        self.showsHeader = showsHeader
+        self.blockStyleMenu = blockStyleMenu
+        self.contentInset = contentInset
     }
 
     /// Creates a Markdown editor whose mode is driven by an external binding.
@@ -108,7 +124,10 @@ public struct MarkdownEditor: View {
         livePreview: Bool = false,
         inputRules: InputRuleProcessor = .standard,
         toolbar: [MarkdownEditorToolbarItem] = .standard,
-        controller: MarkdownEditorController? = nil
+        controller: MarkdownEditorController? = nil,
+        showsHeader: Bool = true,
+        blockStyleMenu: Bool = false,
+        contentInset: CGFloat = 12
     ) {
         self._text = text
         self._ownedMode = State(initialValue: mode.wrappedValue)
@@ -117,6 +136,9 @@ public struct MarkdownEditor: View {
         self.inputRules = inputRules
         self.toolbarItems = toolbar
         self.injectedController = controller
+        self.showsHeader = showsHeader
+        self.blockStyleMenu = blockStyleMenu
+        self.contentInset = contentInset
     }
 
     /// The theme in effect, taken from the environment exactly as it stands.
@@ -135,11 +157,18 @@ public struct MarkdownEditor: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            header
-            Divider()
+            if showsHeader {
+                header
+                Divider()
+            }
             content
         }
         .background(Color(theme.backgroundColor))
+        .confirmationDialog("区块样式", isPresented: $showsBlockStyleMenu, titleVisibility: .visible) {
+            ForEach(MarkdownBlockStyle.allCases, id: \.self) { style in
+                Button(style.title) { changePressedBlock(to: style) }
+            }
+        }
     }
 
     // MARK: - Header
@@ -194,8 +223,30 @@ public struct MarkdownEditor: View {
             theme: theme,
             inputRules: inputRules,
             livePreview: livePreview,
-            onMakeTextView: { controller.bind($0) }
+            contentInset: contentInset,
+            onMakeTextView: { textView in
+                controller.bind(textView)
+                #if canImport(UIKit)
+                if blockStyleMenu {
+                    blockPressHandler.onLongPress = { [weak textView] offset in
+                        guard let textView,
+                              MarkdownBlockStyling.block(in: textView.text, atUTF16Offset: offset) != nil
+                        else { return }
+                        pressedBlockOffset = offset
+                        showsBlockStyleMenu = true
+                    }
+                    blockPressHandler.attach(to: textView)
+                }
+                #endif
+            }
         )
+    }
+
+    private func changePressedBlock(to style: MarkdownBlockStyle) {
+        guard let offset = pressedBlockOffset, let state = controller.state,
+              let transform = MarkdownBlockStyling.transform(state.text, atUTF16Offset: offset, to: style)
+        else { return }
+        controller.apply(transform)
     }
 
     private var preview: some View {

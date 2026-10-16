@@ -68,6 +68,13 @@ public protocol MarkdownMetrics: Sendable {
     /// It indents block quotes, list content, code blocks, and tables alike, and it is the width
     /// the vertical quote bar is positioned within.
     var indentStep: CGFloat { get }
+
+    /// Body line height as a multiple of the font's natural line height.
+    var lineHeightMultiple: CGFloat { get }
+}
+
+public extension MarkdownMetrics {
+    var lineHeightMultiple: CGFloat { 1.2 }
 }
 
 /// The default metrics: 16 points below a block, and a 32-point indent per level.

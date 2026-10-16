@@ -31,6 +31,9 @@ public struct MarkdownSourceTextView {
     /// The markers reappear on the lines the selection touches, and stay hidden everywhere while the
     /// editor is not focused. When `false`, markers stay visible with plain source highlighting.
     public var livePreview: Bool
+    /// Equal padding inside the native editor. Hosts that already provide paper
+    /// margins can set this to zero to avoid doubling the padding.
+    public var contentInset: CGFloat
 
     /// Called once with the text view, as it is created.
     ///
@@ -44,6 +47,7 @@ public struct MarkdownSourceTextView {
         inputRules: InputRuleProcessor = .standard,
         isEditable: Bool = true,
         livePreview: Bool = false,
+        contentInset: CGFloat = 12,
         onMakeTextView: ((PlatformTextView) -> Void)? = nil
     ) {
         self._text = text
@@ -51,6 +55,7 @@ public struct MarkdownSourceTextView {
         self.inputRules = inputRules
         self.isEditable = isEditable
         self.livePreview = livePreview
+        self.contentInset = contentInset
         self.onMakeTextView = onMakeTextView
     }
 
@@ -66,6 +71,7 @@ public struct MarkdownSourceTextView {
         var hasher = Hasher()
         hasher.combine(livePreview)
         hasher.combine(theme.baseFontSize)
+        hasher.combine(theme.lineHeightMultiple)
         hasher.combine(isEditable)
         return hasher.finalize()
     }
@@ -163,7 +169,7 @@ extension MarkdownSourceTextView: UIViewRepresentable {
         textView.backgroundColor = theme.backgroundColor
         textView.tintColor = theme.tintColor
         textView.alwaysBounceVertical = true
-        textView.textContainerInset = UIEdgeInsets(top: 12, left: 12, bottom: 12, right: 12)
+        textView.textContainerInset = UIEdgeInsets(top: contentInset, left: contentInset, bottom: contentInset, right: contentInset)
         // Let a downward scroll drag dismiss the keyboard.
         textView.keyboardDismissMode = .interactive
         // Find and replace. The iOS 17 minimum lets us take the standard find interaction as-is.
@@ -188,6 +194,7 @@ extension MarkdownSourceTextView: UIViewRepresentable {
         context.coordinator.inputRules = inputRules
         context.coordinator.livePreview = livePreview
         textView.isEditable = isEditable
+        textView.textContainerInset = UIEdgeInsets(top: contentInset, left: contentInset, bottom: contentInset, right: contentInset)
 
         let signature = styleSignature()
         if textView.text != text {

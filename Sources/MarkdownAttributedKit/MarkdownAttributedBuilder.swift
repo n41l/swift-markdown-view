@@ -97,7 +97,14 @@ package struct MarkdownAttributedBuilder {
             spacingAfter: theme.paragraphSpacing,
             spacingBefore: theme.paragraphSpacing * 0.5
         )
-        return terminatedParagraph(body, style: style)
+        style.tailIndent = -36 // reserve a trailing gutter for the H1–H6 badge
+        let result = NSMutableAttributedString(attributedString: terminatedParagraph(body, style: style))
+        result.addAttribute(
+            .markdownBlockDecoration,
+            value: MarkdownBlockDecoration(.heading(level: level)),
+            range: NSRange(location: 0, length: result.length)
+        )
+        return result
     }
 
     private func codeBlock(language: String?, code: String, indent: Int) -> NSAttributedString {
@@ -551,7 +558,7 @@ package struct MarkdownAttributedBuilder {
         return result
     }
 
-    private func paragraphStyle(indent: Int, spacingAfter: CGFloat, spacingBefore: CGFloat = 0) -> NSParagraphStyle {
+    private func paragraphStyle(indent: Int, spacingAfter: CGFloat, spacingBefore: CGFloat = 0) -> NSMutableParagraphStyle {
         let style = NSMutableParagraphStyle()
         style.paragraphSpacing = spacingAfter
         style.paragraphSpacingBefore = spacingBefore

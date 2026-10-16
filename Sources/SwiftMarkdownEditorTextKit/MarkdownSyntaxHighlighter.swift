@@ -52,10 +52,14 @@ enum MarkdownSyntaxHighlighter {
 
     /// The attributes for text that carries no token style. Also used as the typing attributes.
     static func baseAttributes(theme: MarkdownEditorTheme) -> [NSAttributedString.Key: Any] {
+        let bodyFont = font(size: theme.baseFontSize)
         let paragraph = NSMutableParagraphStyle()
-        paragraph.lineHeightMultiple = theme.lineHeightMultiple
+        // Extra spacing belongs between lines. lineHeightMultiple stretches the
+        // empty line box too, which makes UITextView draw an oversized caret.
+        let naturalLineHeight = bodyFont.ascender - bodyFont.descender + bodyFont.leading
+        paragraph.lineSpacing = max(0, naturalLineHeight * (theme.lineHeightMultiple - 1))
         return [
-            .font: font(size: theme.baseFontSize),
+            .font: bodyFont,
             .foregroundColor: theme.textColor,
             .paragraphStyle: paragraph
         ]

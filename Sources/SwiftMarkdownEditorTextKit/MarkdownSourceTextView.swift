@@ -157,10 +157,25 @@ public extension MarkdownSourceTextView {
 // MARK: - iOS
 
 #if canImport(UIKit)
+private final class MarkdownEditorUITextView: UITextView {
+    var caretFontLineHeight: CGFloat = 0
+
+    override func caretRect(for position: UITextPosition) -> CGRect {
+        var rect = super.caretRect(for: position)
+        guard caretFontLineHeight > 0, rect.height > caretFontLineHeight else { return rect }
+        // TextKit includes paragraph spacing in the insertion rectangle. Keep
+        // the system caret centered on the text line at the actual font height.
+        let height = ceil(caretFontLineHeight)
+        rect.origin.y += (rect.height - height) / 2
+        rect.size.height = height
+        return rect
+    }
+}
+
 extension MarkdownSourceTextView: UIViewRepresentable {
 
     public func makeUIView(context: Context) -> UITextView {
-        let textView = UITextView(usingTextLayoutManager: true)
+        let textView = MarkdownEditorUITextView(usingTextLayoutManager: true)
         assert(textView.textLayoutManager != nil, "Expected TextKit 2 to be active")
 
         textView.delegate = context.coordinator
@@ -170,6 +185,11 @@ extension MarkdownSourceTextView: UIViewRepresentable {
         textView.tintColor = theme.tintColor
         textView.alwaysBounceVertical = true
         textView.textContainerInset = UIEdgeInsets(top: contentInset, left: contentInset, bottom: contentInset, right: contentInset)
+        // UITextView adds 5 pt of line-fragment padding on top of textContainerInset.
+        // Keep contentInset as the only horizontal inset so hosts can align a
+        // placeholder or neighboring rendered Markdown with the editable text.
+        textView.textContainer.lineFragmentPadding = 0
+        textView.caretFontLineHeight = MarkdownSyntaxHighlighter.font(size: theme.baseFontSize).lineHeight
         // Let a downward scroll drag dismiss the keyboard.
         textView.keyboardDismissMode = .interactive
         // Find and replace. The iOS 17 minimum lets us take the standard find interaction as-is.
@@ -195,6 +215,10 @@ extension MarkdownSourceTextView: UIViewRepresentable {
         context.coordinator.livePreview = livePreview
         textView.isEditable = isEditable
         textView.textContainerInset = UIEdgeInsets(top: contentInset, left: contentInset, bottom: contentInset, right: contentInset)
+        textView.textContainer.lineFragmentPadding = 0
+        if let textView = textView as? MarkdownEditorUITextView {
+            textView.caretFontLineHeight = MarkdownSyntaxHighlighter.font(size: theme.baseFontSize).lineHeight
+        }
 
         let signature = styleSignature()
         if textView.text != text {
